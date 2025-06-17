@@ -58,7 +58,7 @@ def log_results(data, filename="iperf_results.json"):
 
 def clear_json():
 	with open("iperf_results.json", "w") as f:
-		f.write("")
+		json.dump([], f)
 
 if __name__ == "__main__":
     import sys
@@ -68,12 +68,12 @@ if __name__ == "__main__":
             tester = Iperf3Test(host="0.0.0.0") # Listen on all interfaces
             tester.run_server()
         elif sys.argv[1] == "client" and len(sys.argv) > 2:
-            #clear_json()
+            clear_json()
             server_ip = sys.argv[2]
             tester = Iperf3Test(host=server_ip)
             
             # Example: Run UDP tests with increasing bandwidths
-            bandwidths = ["1K", "10K", "50K", "100K", "250K", "400K"]
+            bandwidths = ["1K", "10K", "25K", "50K", "75K", "100K", "125K", "150K", "200K", "250K", "300K"]
             all_results = []
             for bw in bandwidths:
                 print(f"\n--- Testing with bandwidth: {bw} ---")
