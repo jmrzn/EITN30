@@ -78,7 +78,6 @@ def get_next_packet_id():
     return current_packet_id
 
 def apply_artificial_constraints(should_drop=True):
-    """Apply artificial constraints to simulate radio behavior"""
     # Simulate packet loss
     if should_drop and ARTIFICIAL_PACKET_LOSS > 0:
         if random.random() < ARTIFICIAL_PACKET_LOSS:
@@ -91,7 +90,6 @@ def apply_artificial_constraints(should_drop=True):
     return True  # Packet not dropped
 
 def update_stats(action, bytes_count=0, is_fragment=False, packet_id=None, latency_ms=None):
-    """Update performance statistics"""
     global performance_stats
     
     if performance_stats['start_time'] is None:
@@ -115,7 +113,6 @@ def update_stats(action, bytes_count=0, is_fragment=False, packet_id=None, laten
         performance_stats['packet_latencies'].append((packet_id, latency_ms))
 
 def print_stats():
-    """Print current performance statistics"""
     global performance_stats
     
     if performance_stats['start_time'] is None:
@@ -150,7 +147,6 @@ def print_stats():
 
 # --- UDP Socket Functions ---
 def setup_udp_socket(local_ip, local_port):
-    """Set up UDP socket for simulated radio communication"""
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.bind((local_ip, local_port))
     sock.setblocking(False)  # Non-blocking mode
@@ -159,7 +155,6 @@ def setup_udp_socket(local_ip, local_port):
 
 # --- TUN Interface Functions ---
 def setup_tun_interface(if_name, ip_addr, netmask, mtu):
-    """Set up TUN interface for IP tunneling"""
     try:
         tun = pytun.TunTapDevice(name=if_name, flags=pytun.IFF_TUN | pytun.IFF_NO_PI)
         tun.addr = ip_addr
@@ -175,7 +170,6 @@ def setup_tun_interface(if_name, ip_addr, netmask, mtu):
 
 # --- Packet Processing Functions ---
 def fragment_and_send(sock, ip_packet, dest_addr, dest_port, packet_id):
-    """Fragment IP packet and send via UDP socket"""
     packet_len = len(ip_packet)
     logger.debug(f"Fragmenting IP packet (ID: {packet_id}, len: {packet_len})")
     
@@ -229,7 +223,6 @@ def fragment_and_send(sock, ip_packet, dest_addr, dest_port, packet_id):
     return True
 
 def reassemble_packet(packet_id, fragment_offset_scaled, flags, data):
-    """Reassemble fragments into complete IP packet"""
     more_fragments = flags & 0x01
     fragment_offset = fragment_offset_scaled # Multiply by 8
     
@@ -295,7 +288,6 @@ def extract_custom_message(ip_packet_data):
     return None
 
 def cleanup_reassembly_buffer():
-    """Clean up timed-out fragments in reassembly buffer"""
     now = time.time()
     expired_ids = [pid for pid, data in reassembly_buffer.items() if now - data['last_seen'] > REASSEMBLY_TIMEOUT]
     for pid in expired_ids:
@@ -304,7 +296,6 @@ def cleanup_reassembly_buffer():
 
 # --- Main Threads ---
 def tun_to_udp_thread(tun, sock, remote_ip, remote_port):
-    """Read from TUN interface and send to UDP socket"""
     logger.info(f"Starting TUN -> UDP thread (sending to {remote_ip}:{remote_port})...")
     
     while True:
@@ -341,7 +332,6 @@ def tun_to_udp_thread(tun, sock, remote_ip, remote_port):
             time.sleep(1)
 
 def udp_to_tun_thread(sock, tun):
-    """Receive from UDP socket and write to TUN interface"""
     logger.info("Starting UDP -> TUN thread...")
     
     while True:
@@ -399,7 +389,6 @@ def udp_to_tun_thread(sock, tun):
             time.sleep(1)
 
 def stats_thread():
-    """Periodically print performance statistics"""
     while True:
         time.sleep(30)  # Print stats every 10 seconds
         if STAT_PRINT is True:
@@ -407,7 +396,6 @@ def stats_thread():
 
 # --- Traffic Control Functions ---
 def setup_traffic_control(interface, rate_kbps=250, latency_ms=0):
-    """Set up traffic control (tc) to limit bandwidth and add latency"""
     try:
         # Remove any existing qdisc
         os.system(f"sudo tc qdisc del dev {interface} root 2>/dev/null")
@@ -435,7 +423,6 @@ def setup_traffic_control(interface, rate_kbps=250, latency_ms=0):
         return False
 
 def cleanup_traffic_control(interface):
-    """Remove traffic control settings"""
     try:
         os.system(f"sudo tc qdisc del dev {interface} root 2>/dev/null")
         logger.info(f"Traffic control removed from {interface}")
@@ -446,7 +433,6 @@ def cleanup_traffic_control(interface):
 
 # --- Signal Handling ---
 def signal_handler(sig, frame):
-    """Handle Ctrl+C and other signals"""
     logger.info("Shutting down...")
     print_stats()
     
@@ -507,21 +493,16 @@ if __name__ == "__main__":
     logger.info(f"Local UDP: {local_ip}:{local_port}, Remote UDP: {remote_ip}:{remote_port}")
     logger.info(f"Artificial constraints - Packet Loss: {ARTIFICIAL_PACKET_LOSS}, Delay: {ARTIFICIAL_DELAY_MS}ms")
     
-    # Set up signal handlers
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
     
-    # Apply traffic control if requested
     if args.tc_interface:
         setup_traffic_control(args.tc_interface, args.tc_rate, args.tc_latency)
     
-    # Setup TUN interface
     tun_device = setup_tun_interface(TUN_IF_NAME, tun_ip, TUN_IF_NETMASK, TUN_MTU)
     
-    # Setup UDP socket
     udp_socket = setup_udp_socket(local_ip, local_port)
     
-    # Start threads
     thread1 = threading.Thread(target=tun_to_udp_thread, args=(tun_device, udp_socket, remote_ip, remote_port), daemon=True)
     thread2 = threading.Thread(target=udp_to_tun_thread, args=(udp_socket, tun_device), daemon=True)
     thread3 = threading.Thread(target=stats_thread, daemon=True)
@@ -533,7 +514,6 @@ if __name__ == "__main__":
     logger.info("Threads started. Tunnel is active. Press Ctrl+C to exit.")
     
     try:
-        # Keep main thread alive
         while True:
             time.sleep(1)
     except KeyboardInterrupt:
